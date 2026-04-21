@@ -1,33 +1,30 @@
 import os
 import re
 import json
-from google import genai
-from google.genai import types
+from groq import Groq
 
 _client = None
 
 
-def _get_client():
+def _get_client() -> Groq:
     global _client
     if _client is None:
-        api_key = os.environ.get("GEMINI_API_KEY")
+        api_key = os.environ.get("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY no configurada")
-        _client = genai.Client(api_key=api_key)
+            raise ValueError("GROQ_API_KEY no configurada")
+        _client = Groq(api_key=api_key)
     return _client
 
 
 def _call(prompt: str, max_tokens: int = 2000) -> str:
     client = _get_client()
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            max_output_tokens=max_tokens,
-            temperature=0.3,
-        ),
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=max_tokens,
+        temperature=0.3,
     )
-    text = response.text.strip()
+    text = response.choices[0].message.content.strip()
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?\n?", "", text)
         text = re.sub(r"\n?```$", "", text)
@@ -67,24 +64,30 @@ Analizá mi publicación y comparala con los competidores para darme recomendaci
 {competitors_text}
 
 ## TAREA
-Analizá en profundidad y devolvé un JSON con esta estructura exacta (sin texto extra, solo JSON):
+Analizá en profundidad y devolvé un JSON con esta estructura exacta (sin texto extra, solo JSON válido):
 {{
   "score": <número 1-10 que representa la calidad actual de la publicación>,
   "score_reason": "<1 oración explicando el puntaje>",
   "summary": "<resumen ejecutivo de 2-3 oraciones del estado actual vs competidores>",
   "price_position": "<premium|competitivo|económico|muy económico> con una breve explicación",
+  "proposed_title": "<título nuevo EXACTO que deberías usar, optimizado para ML: máx 60 caracteres, con keywords de alto volumen, sin repetir palabras>",
   "recommendations": [
     {{
       "priority": "<alta|media|baja>",
       "category": "<título|precio|fotos|video|descripción|envío|atributos|palabras_clave|oferta>",
       "issue": "<qué está mal o qué falta>",
-      "action": "<qué hacer exactamente, con ejemplos concretos>",
+      "action": "<qué hacer exactamente>",
+      "proposed_value": "<el texto/valor EXACTO que debería ir: el título nuevo, el precio sugerido, el texto de descripción, etc. Siempre dar el reemplazo listo para copiar y pegar>",
       "impact": "<cuál es el impacto esperado en ventas>"
     }}
   ]
 }}
 
-Ordená las recomendaciones de mayor a menor prioridad. Sé muy específico y usa ejemplos reales del mercado."""
+IMPORTANTE: En "proposed_value" siempre poné el texto listo para usar, no instrucciones genéricas.
+Para título: el título completo optimizado.
+Para descripción: el párrafo o sección mejorada.
+Para precio: el número exacto sugerido.
+Ordená las recomendaciones de mayor a menor prioridad."""
 
     return json.loads(_call(prompt, max_tokens=2000))
 
@@ -106,7 +109,7 @@ Identificá los mejores nichos dentro de este vertical para importar y vender. C
 - Tendencias del mercado
 - Barreras de entrada bajas
 
-Devolvé un JSON con esta estructura exacta (sin texto extra):
+Devolvé un JSON con esta estructura exacta (sin texto extra, solo JSON válido):
 {{
   "vertical": "{selected_vertical}",
   "market_summary": "<resumen del mercado en 2-3 oraciones>",

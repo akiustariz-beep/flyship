@@ -177,13 +177,13 @@ st.markdown(
 )
 
 # ── API key check ─────────────────────────────────────────────────────────────
-api_key = os.environ.get("GEMINI_API_KEY", "")
+api_key = os.environ.get("GROQ_API_KEY", "")
 if not api_key:
     with st.sidebar:
         st.subheader("⚙️ Configuración")
-        key_input = st.text_input("GEMINI_API_KEY", type="password", placeholder="AIza...")
+        key_input = st.text_input("GROQ_API_KEY", type="password", placeholder="gsk_...")
         if key_input:
-            os.environ["GEMINI_API_KEY"] = key_input
+            os.environ["GROQ_API_KEY"] = key_input
             st.success("Clave guardada en sesión")
 
 # ── TABS ──────────────────────────────────────────────────────────────────────
@@ -284,7 +284,7 @@ with tab_pubs:
             with col_action:
                 analyze_key = f"analyze_{pub['id']}"
                 if st.button("🔍 Analizar", key=analyze_key, use_container_width=True):
-                    if not os.environ.get("GEMINI_API_KEY"):
+                    if not os.environ.get("GROQ_API_KEY"):
                         st.error("Configurá tu ANTHROPIC_API_KEY en el panel lateral.")
                     else:
                         with st.spinner(f"Analizando **{pub['name']}**… esto puede tardar 30-60 seg."):
@@ -352,6 +352,25 @@ with tab_pubs:
                         f"· búsqueda: *{last_analysis.get('search_query', '')}*"
                     )
 
+                # ── Título actual vs propuesto ────────────────────────────
+                current_title = listing.get("title", "")
+                proposed_title = last_analysis.get("proposed_title", "")
+                if current_title or proposed_title:
+                    st.markdown("#### 🏷️ Título")
+                    tcol1, tcol2 = st.columns(2)
+                    with tcol1:
+                        st.markdown("**Título actual**")
+                        st.markdown(
+                            f'<div style="background:#f8f8f8;border:1px solid #ddd;border-radius:8px;padding:0.7rem 1rem;font-size:0.9rem;color:#555">{current_title}</div>',
+                            unsafe_allow_html=True,
+                        )
+                    with tcol2:
+                        st.markdown("**✅ Título propuesto**")
+                        st.markdown(
+                            f'<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:0.7rem 1rem;font-size:0.9rem;font-weight:600;color:#1b5e20">{proposed_title or "—"}</div>',
+                            unsafe_allow_html=True,
+                        )
+
                 st.markdown("#### 📋 Recomendaciones")
 
                 recs = last_analysis.get("recommendations", [])
@@ -367,11 +386,18 @@ with tab_pubs:
                     icon = cat_icons.get(cat, "•")
                     css = priority_class(priority)
                     priority_label = {"alta": "🔴 ALTA", "media": "🟡 MEDIA", "baja": "🟢 BAJA"}.get(priority, priority)
+                    proposed = rec.get("proposed_value", "")
+                    proposed_html = (
+                        f'<div style="margin-top:0.4rem;background:#e8f5e9;border:1px solid #a5d6a7;'
+                        f'border-radius:6px;padding:0.4rem 0.7rem;font-size:0.83rem;color:#1b5e20">'
+                        f'📋 <strong>Copiar y pegar:</strong> {proposed}</div>'
+                    ) if proposed else ""
                     st.markdown(
                         f'<div class="{css}">'
                         f'<h4>{icon} {cat.upper()} &nbsp;<span style="font-weight:400;font-size:0.78rem">prioridad {priority_label}</span></h4>'
                         f'<div style="font-size:0.85rem;color:#333;font-weight:500">{rec.get("issue","")}</div>'
                         f'<div class="rec-action">💡 <strong>Acción:</strong> {rec.get("action","")}</div>'
+                        f'{proposed_html}'
                         f'<div class="rec-impact">📈 <em>{rec.get("impact","")}</em></div>'
                         f'</div>',
                         unsafe_allow_html=True,
@@ -433,7 +459,7 @@ with tab_opps:
     if analyze_opp:
         if not selected_vertical:
             st.error("Seleccioná o ingresá un vertical.")
-        elif not os.environ.get("GEMINI_API_KEY"):
+        elif not os.environ.get("GROQ_API_KEY"):
             st.error("Configurá tu ANTHROPIC_API_KEY en el panel lateral.")
         else:
             with st.spinner(f"Analizando oportunidades en **{selected_vertical}**…"):
