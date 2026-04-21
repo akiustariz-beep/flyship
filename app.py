@@ -292,17 +292,32 @@ with tab_pubs:
                                 from scraper import scrape_listing, scrape_search_results, build_search_query_from_title
                                 from analyzer import analyze_publication
 
-                                # 1. Scrape own listing
-                                fresh_listing = scrape_listing(pub["url"])
+                                # 1. Scrape own listing (use cached if scraping is blocked)
+                                try:
+                                    fresh_listing = scrape_listing(pub["url"])
+                                except Exception:
+                                    fresh_listing = {}
+
+                                # Fall back to cached listing if scraping returned no title
+                                if not fresh_listing.get("title"):
+                                    fresh_listing = pub.get("listing") or {}
+
+                                if not fresh_listing.get("title"):
+                                    st.error("No se pudieron obtener los datos de la publicación. MercadoLibre bloquea el scraping desde servidores cloud. Corré la app localmente para analizarla.")
+                                    st.stop()
+
                                 st.session_state.publications[idx]["listing"] = fresh_listing
 
                                 # 2. Scrape competitors
                                 search_q = build_search_query_from_title(
                                     fresh_listing.get("title") or pub["name"]
                                 )
-                                competitors = scrape_search_results(search_q, limit=25)
+                                try:
+                                    competitors = scrape_search_results(search_q, limit=25)
+                                except Exception:
+                                    competitors = []
 
-                                # 3. Claude analysis
+                                # 3. AI analysis
                                 result = analyze_publication(fresh_listing, competitors)
                                 result["timestamp"] = datetime.now().isoformat()
                                 result["search_query"] = search_q

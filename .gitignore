@@ -9,5 +9,4 @@ build/
 .venv/
 venv/
 
-# No subir análisis ni datos personales
-data/publications.json
+# analyses are saved locally only
