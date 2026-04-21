@@ -43,13 +43,15 @@ def analyze_publication(my_listing: dict, competitors: list) -> dict:
         )
 
     attrs_text = json.dumps(my_listing.get("attributes", {}), ensure_ascii=False, indent=2)
+    price = my_listing.get("price")
+    price_str = f"${price:,}" if price else "N/D"
 
     prompt = f"""Sos un experto en optimización de publicaciones de MercadoLibre Argentina.
 Analizá mi publicación y comparala con los competidores para darme recomendaciones concretas y accionables.
 
 ## MI PUBLICACIÓN
 - **Título**: {my_listing.get("title", "N/D")}
-- **Precio**: ${my_listing.get("price", "N/D"):,} ARS
+- **Precio**: {price_str} ARS
 - **Calificación**: {my_listing.get("rating") or "Sin calificaciones aún"}
 - **Reseñas**: {my_listing.get("reviews_count", 0)}
 - **Fotos**: {my_listing.get("images_count", 0)} imágenes
